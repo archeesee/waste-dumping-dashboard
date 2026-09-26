@@ -1,0 +1,8 @@
+              precision    recall  f1-score   support
+
+  NO DUMPING      0.850     0.680     0.756        25
+     DUMPING      0.733     0.880     0.800        25
+
+    accuracy                          0.780        50
+   macro avg      0.792     0.780     0.778        50
+weighted avg      0.792     0.780     0.778        50

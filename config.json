@@ -1,0 +1,10 @@
+{
+  "num_frames": 24,
+  "img_size": 224,
+  "backbone": "MobileNetV2 (frozen, ImageNet weights)",
+  "threshold": 0.5,
+  "class_names": [
+    "NO DUMPING",
+    "DUMPING"
+  ]
+}
