@@ -8,15 +8,46 @@ import streamlit as st
 
 st.set_page_config(page_title="AI-Assisted Illegal Waste Dumping Review", layout="wide")
 
-st.title("AI-Assisted Detection and Prioritisation of Illegal Waste Dumping")
-st.caption("College prototype | Dataset: public MIVIA-IWDD-500 (NOT Mumbai CCTV footage) | "
-           "Mumbai is only the proposed real-world application context")
+st.markdown("""<style>
+.stApp{background:#e9ecf1 !important}
+.stApp h1,.stApp h2,.stApp h3,.stApp p,.stApp li,.stApp label,.stApp span,.stApp div[data-testid="stMarkdownContainer"]{color:#1f2937 !important}
+.block-container{padding-top:0 !important;max-width:1200px}
+header[data-testid="stHeader"]{background:transparent}
+.pb-top{background:#252423;border-bottom:4px solid #f2c811;margin:0 -5rem 14px;padding:18px 5rem}
+.pb-top h1{color:#fff !important;font-size:22px !important;margin:0 !important;padding:0 !important}
+.pb-top p{color:#c9c9c9 !important;font-size:12.5px;margin:4px 0 0}
+.pb-note{background:#fff8d6;border-left:5px solid #f2c811;padding:10px 14px;font-size:13.5px;margin-bottom:14px}
+.pb-note,.pb-note *{color:#5a4a00 !important}
+.pb-card{background:#fff;border:1px solid #e5e7eb;border-radius:4px;padding:14px 16px;height:100%}
+.pb-card h4{margin:0 0 10px;font-size:14px;font-weight:600;color:#1f2937 !important}
+.pb-kpi{border-top:4px solid #118dff}.pb-kpi.a{border-top-color:#d64550}.pb-kpi.b{border-top-color:#1aab40}.pb-kpi.c{border-top-color:#f2c811}
+.pb-kpi .n{font-size:34px;font-weight:600;line-height:1.1;color:#1f2937 !important}
+.pb-kpi .l{font-size:12.5px;color:#6b7280 !important;margin-top:2px}
+.pb-row{margin:9px 0}.pb-row .t{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+.pb-tr{background:#e5e7eb;height:12px;border-radius:2px}.pb-tr b{display:block;height:100%;border-radius:2px;background:#118dff}.pb-tr.y b{background:#f2c811}
+.pb-cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:4px;font-size:12px;text-align:center}
+.pb-cm .h{color:#6b7280 !important;align-self:center;padding:2px 6px}
+.pb-cm .c{border-radius:3px;padding:16px 4px;font-size:26px;font-weight:600;color:#fff !important}
+.stApp [data-testid="stFileUploader"] section{background:#fff}
+</style>""", unsafe_allow_html=True)
+
+def card(title, body, extra=""):
+    return f'<div class="pb-card {extra}"><h4>{title}</h4>{body}</div>'
+
+def kpi(n, label, cls=""):
+    return f'<div class="pb-card pb-kpi {cls}"><div class="n">{n}</div><div class="l">{label}</div></div>'
+
+def bar(label, pct, yellow=False):
+    return (f'<div class="pb-row"><div class="t"><span>{label}</span><b>{pct:.1f}%</b></div>'
+            f'<div class="pb-tr {"y" if yellow else ""}"><b style="width:{pct:.1f}%"></b></div></div>')
+
+st.markdown("""<div class="pb-top"><h1>AI-Assisted Detection and Prioritisation of Illegal Waste Dumping</h1>
+<p>Design Thinking project | Archee Arolkar, Roll No. 38 | Dataset: public MIVIA-IWDD-500 (not Mumbai footage)</p></div>""", unsafe_allow_html=True)
 
 here = Path(__file__).parent
 res = here
 
-st.warning("**Human review required.** This system only flags *suspected* dumping incidents for an authorised "
-           "officer to review. It never accuses a person, issues a fine, or triggers enforcement action by itself.")
+st.markdown('<div class="pb-note"><b>Human review required.</b> This system only flags suspected dumping for an authorised officer. It never accuses anyone, issues a fine, or takes enforcement action.</div>', unsafe_allow_html=True)
 
 st.header("Try it live: upload a video")
 st.caption("Upload any short surveillance-style clip (mp4/avi/mov). The trained model below analyses it and returns a prediction.")
@@ -116,47 +147,49 @@ if not pred_file.exists():
 else:
     df = pd.read_csv(pred_file)
     metrics = json.load(open(res / "metrics.json")) if (res / "metrics.json").exists() else {}
-
     total = len(df)
-    flagged_n = int((df["pred_label"] == 1).sum())
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total videos analysed", total)
-    c2.metric("Dumping detected (flagged)", flagged_n)
-    c3.metric("No dumping detected", total - flagged_n)
-    c4.metric("Average prediction confidence", f"{df['confidence'].mean():.1%}")
-    st.caption("Videos analysed = the official test set, which the model never saw during training.")
+    fl = int((df["pred_label"] == 1).sum())
+    k = st.columns(4)
+    k[0].markdown(kpi(total, "Videos analysed (official test set)"), unsafe_allow_html=True)
+    k[1].markdown(kpi(fl, "Flagged as dumping", "a"), unsafe_allow_html=True)
+    k[2].markdown(kpi(total - fl, "Not flagged", "b"), unsafe_allow_html=True)
+    k[3].markdown(kpi(f"{df['confidence'].mean():.1%}", "Average prediction confidence", "c"), unsafe_allow_html=True)
+    st.write("")
 
-    if metrics:
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Accuracy", f"{metrics['accuracy']:.1%}")
-        m2.metric("Precision", f"{metrics['precision']:.1%}")
-        m3.metric("Recall", f"{metrics['recall']:.1%}")
-        m4.metric("F1-score", f"{metrics['f1']:.1%}")
+    pct = fl / total * 100 if total else 0
+    dash = 251.3 * pct / 100
+    donut = (f'<svg viewBox="0 0 100 100" width="150" height="150"><circle cx="50" cy="50" r="40" fill="none" stroke="#1aab40" stroke-width="16"/>'
+             f'<circle cx="50" cy="50" r="40" fill="none" stroke="#d64550" stroke-width="16" stroke-dasharray="{dash:.1f} 251.3" transform="rotate(-90 50 50)"/>'
+             f'<text x="50" y="55" text-anchor="middle" font-size="16" font-weight="600" fill="#1f2937">{pct:.0f}%</text></svg>'
+             f'<div style="font-size:13px"><div><span style="color:#d64550">&#9632;</span> Flagged: {fl}</div><div><span style="color:#1aab40">&#9632;</span> Not flagged: {total - fl}</div></div>')
+    tn = int(((df["true_label"] == 0) & (df["pred_label"] == 0)).sum()); fp = int(((df["true_label"] == 0) & (df["pred_label"] == 1)).sum())
+    fn = int(((df["true_label"] == 1) & (df["pred_label"] == 0)).sum()); tp = int(((df["true_label"] == 1) & (df["pred_label"] == 1)).sum())
+    cm = (f'<div class="pb-cm"><span></span><span class="h">Pred: no dumping</span><span class="h">Pred: dumping</span>'
+          f'<span class="h">Actual: no dumping</span><div class="c" style="background:#3d7dd8">{tn}</div><div class="c" style="background:#8fb6e8;color:#12305e !important">{fp}</div>'
+          f'<span class="h">Actual: dumping</span><div class="c" style="background:#c8dbf3;color:#12305e !important">{fn}</div><div class="c" style="background:#12239e">{tp}</div></div>'
+          f'<p style="font-size:12.5px;margin:10px 0 0">Missed dumping: {fn}. False alarms: {fp}.</p>')
+    perf = "".join(bar(n, metrics[key] * 100, key == "recall") for n, key in
+                   [("Accuracy", "accuracy"), ("Precision", "precision"), ("Recall", "recall"), ("F1-score", "f1")]) if metrics else ""
+    c = st.columns(3)
+    c[0].markdown(card("Flagged vs not flagged", f'<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">{donut}</div>'), unsafe_allow_html=True)
+    c[1].markdown(card("Confusion matrix", cm), unsafe_allow_html=True)
+    c[2].markdown(card("Model performance", perf + '<p style="font-size:12.5px;margin:10px 0 0">Recall is highest by design: a missed incident costs more than a false alarm.</p>'), unsafe_allow_html=True)
+    st.write("")
 
-    left, right = st.columns(2)
-    with left:
-        st.subheader("Confusion matrix")
-        if (res / "confusion_matrix.png").exists():
-            st.image(str(res / "confusion_matrix.png"))
-    with right:
-        st.subheader("Training curves")
+    pos = df[df["true_label"] == 1]
+    sd = ""
+    if len(pos) and "event_type" in pos:
+        for et, g in pos.groupby("event_type"):
+            sd += bar(f"{et.title()} ({int(g['pred_label'].sum())} of {len(g)} caught)", g["pred_label"].mean() * 100)
+    d = st.columns(3)
+    d[0].markdown(card("Detection rate: static vs dynamic dumping", sd), unsafe_allow_html=True)
+    d[1].markdown(card("How the system works", "<ul style='font-size:13.5px;line-height:1.7;padding-left:18px'><li>Surveillance video, sampled frames</li><li>Pretrained MobileNetV2 features</li><li>Bidirectional GRU classifier</li><li>DUMPING / NO DUMPING + confidence</li><li>Human officer reviews every flag</li></ul>"), unsafe_allow_html=True)
+    d[2].markdown(card("Training curves", ""), unsafe_allow_html=True)
+    with d[2]:
         for name in ["accuracy_curve.png", "loss_curve.png"]:
             if (res / name).exists():
                 st.image(str(res / name))
-
-    st.subheader("Static vs dynamic dumping")
-    pos = df[df["true_label"] == 1]
-    if len(pos) and "event_type" in pos:
-        tab = pos.groupby("event_type").agg(videos=("video_id", "count"), detected=("pred_label", "sum"))
-        tab["detection_rate"] = (tab["detected"] / tab["videos"]).round(3)
-        a, b = st.columns(2)
-        a.dataframe(tab)
-        b.bar_chart(tab["detection_rate"])
-
-    st.subheader("Prediction confidence distribution")
-    counts = pd.cut(df["confidence"], bins=[0.5, 0.6, 0.7, 0.8, 0.9, 1.0], include_lowest=True).value_counts().sort_index()
-    counts.index = counts.index.astype(str)
-    st.bar_chart(counts)
+    st.write("")
 
     st.subheader("Flagged incidents: priority review queue")
     min_conf = st.slider("Minimum confidence to show", 0.5, 1.0, 0.5, 0.01)
@@ -170,18 +203,16 @@ else:
             "Dumping probability": q["dumping_probability"].round(3).values,
             "Confidence": q["confidence"].round(3).values,
             "Annotated type (dataset)": q["event_type"].values,
-            "Annotated onset, seconds (dataset)": q["onset_sec"].where(q["onset_sec"] >= 0).values,
             "Time of day (dataset)": q["time_of_day"].values,
             "Reviewer decision": "Pending",
         })
         st.data_editor(
             view, hide_index=True,
-            disabled=[c for c in view.columns if c != "Reviewer decision"],
+            disabled=[c_ for c_ in view.columns if c_ != "Reviewer decision"],
             column_config={"Reviewer decision": st.column_config.SelectboxColumn(
                 options=["Pending", "Confirmed by officer", "Dismissed by officer"])},
         )
-        st.caption("Ranked by model probability so reviewers see the most likely incidents first. "
-                   "The 'annotated' columns are ground truth from the dataset, shown for evaluation only.")
+        st.caption("Ranked by model probability so reviewers see the most likely incidents first. Decisions here are a demo and are not saved.")
 
     with st.expander("Error analysis: videos the model got wrong"):
         st.dataframe(df[~df["correct"]][["video_id", "true_label", "pred_label", "dumping_probability", "event_type", "time_of_day"]])
