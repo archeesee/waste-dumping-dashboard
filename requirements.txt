@@ -1,2 +1,5 @@
-streamlit
+ streamlit
 pandas
+tensorflow-cpu
+opencv-python-headless
+gdown
